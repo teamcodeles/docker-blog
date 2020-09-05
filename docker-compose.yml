@@ -1,0 +1,84 @@
+version: '3.3'
+
+services:
+  mysql:
+    container_name: d-mysql
+    build:
+      context: ./mysql
+    image: d-mysql
+    volumes:
+      - /home/$USER/docker-volumes/data/mysql:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: secret
+      MYSQL_PASSWORD: secret
+      MYSQL_USER: admin
+      MYSQL_PASSWORD: secret
+      MYSQL_DATABASE: wordpress
+    ports:
+      - "3306:3306"
+    restart: always    
+    networks:
+      - docknet
+
+  php:
+    container_name: d-php
+    build:
+      context: ./php
+    image: d-php  
+    volumes:
+      - $PWD/www:/var/www 
+      - $PWD/php/local.ini:/usr/local/etc/php/conf.d/local.ini 
+    depends_on:
+      - php-myadmin
+    links:
+      - mysql    
+    networks:
+      - docknet
+
+  nginx:
+    build:
+      context: ./nginx
+    image: d-nginx
+    container_name: d-nginx
+    #restart: always
+    volumes:
+      - $PWD/www:/var/www
+      - $PWD/nginx/log:/var/log/nginx
+      - $PWD/nginx/sites:/etc/nginx/sites-available
+      - $PWD/nginx/dhparam:/etc/nginx/dhparam
+      - $PWD/nginx/certbot/conf/:/etc/nginx/ssl/
+      - $PWD/www/codeles/:/usr/share/nginx/html/letsencrypt
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - certbot 
+      - php  
+    networks:
+      - docknet        
+  
+  certbot:
+    image: certbot/certbot:latest
+    container_name: d-certbot
+    command: certonly --webroot --webroot-path=/usr/share/nginx/html/letsencrypt --email team.codeles@gmail.com --agree-tos --no-eff-email -d codeles.com
+    volumes:
+      - $PWD/nginx/certbot/conf:/etc/letsencrypt
+      - $PWD/nginx/certbot/logs:/var/log/letsencrypt
+      - $PWD/www/codeles/:/usr/share/nginx/html/letsencrypt
+        
+  php-myadmin:
+    container_name: d-phpmyadmin
+    build:
+      context: ./phpmyadmin
+    image: d-phpmyadmin
+    environment:
+      PMA_HOST: mysql   
+    depends_on:
+      - mysql
+    ports:
+      - "8080:80" 
+    networks:
+      - docknet 
+
+networks:   
+  docknet: 

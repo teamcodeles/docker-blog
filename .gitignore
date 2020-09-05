@@ -1,0 +1,5 @@
+www
+nginx/log
+nginx/sites
+!nginx/sites/codeles.conf
+nginx/certbot/*
